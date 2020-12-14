@@ -1,7 +1,12 @@
+Require Import Arith.
+Require Import Bool.
+Require Import Coq.Strings.Byte.
+Require Import Ascii.
 Require Import Strings.String.
 Local Open Scope string_scope.
 Local Open Scope list_scope. 
 Scheme Equality for string.
+
 (* Librariile necesare pt a lucra cu stringuri*)
 
 (* Acum voi inlocui tipul nat pe care l am mai folosit cu un nou tip: ErrorNar, care trateaza si cazurile mai speciale *)
@@ -23,16 +28,17 @@ Check error_bool.
 Check bul.
 Coercion bul : bool >-> ErrorBool.
 
-(* Same si pentru char*)
+(* Creez tipul pentru stringuri ca siruri de caractere ascii *)
 
-Inductive ErrorChar :=
- | error_char : ErrorChar
- | char : string -> ErrorChar.
-Compute char.
-Check ErrorChar.
-Check error_char.
-Check char.
-Coercion char : string >-> ErrorChar.
+
+Inductive string : Type :=
+  | EmptyString : string
+  | String : ascii -> string -> string.
+
+
+Delimit Scope string_scope with string.
+Local Open Scope string_scope.
+
 
 (* Creez un tip in care adun toate celelalte tipuri *)
 
@@ -42,9 +48,11 @@ Inductive Tipuri :=
  | default : Tipuri (* O valoare default care se pune in variabile la declarere (0 pt num, false pt bul si " " pt char) *)
  | tip_nat : ErrorNat -> Tipuri
  | tip_bul : ErrorBool -> Tipuri
- | tip_char : ErrorChar -> Tipuri.
+ | tip_char : string -> Tipuri.
 Check tip_nat.
-Scheme Equality for Tipuri.
+Check tip_char.
+
+(* Scheme Equality for Tipuri. *)
 
 (* Deoarece am construit tipul "Tipuri", nu mai trebuie sa fac cate un enviroment pentru toate tipurile, ci doar pentru el*)
 Definition Env := string -> Tipuri.
@@ -73,10 +81,11 @@ Definition Egalitate_tipuri (t1 : Tipuri)(t2 : Tipuri) : bool :=
                    | tip_bul _y => true
                    | _ => false
                    end
- | tip_char _x => match t2 with  
+ | tip_char _x => match t2 with
                    | tip_char _y => true
                    | _ => false
-                   end
+                  end
+
  end.
 
 Compute (Egalitate_tipuri (tip_nat 2)(tip_nat 123)).
@@ -84,8 +93,8 @@ Compute (Egalitate_tipuri (tip_nat 2)(tip_bul true)).
 
 (* Definesc un environment in care practic spun ca initial nici o variabila nu este declarata*)
 Definition env : Env := fun x => error_undecl. 
-Check (env "x").
-Compute (env "x").
+(* Check (env "x").
+Compute (env "x"). *)
 
 (* Acum fac functia de atribuire a unei valori unei variabile*)
 
@@ -136,6 +145,8 @@ Definition plus_ErrorNat (n1 n2 : ErrorNat) : ErrorNat :=
     | _, error_nat => error_nat
     | num v1, num v2 => num (v1 + v2)
   end. 
+
+Compute plus_ErrorNat 1 2.
 
 Definition minus_ErrorNat (n1 n2 : ErrorNat) : ErrorNat :=
   match n1, n2 with
@@ -236,13 +247,15 @@ Inductive BExp :=
  | bgreaterthan : AExp -> AExp -> BExp
  | bnot : BExp -> BExp
  | band : BExp -> BExp -> BExp
- | bor : BExp -> BExp -> BExp.
+ | bor : BExp -> BExp -> BExp
+ | bequal : AExp -> AExp -> BExp.
 
 Notation "A <=' B" := (blessthan A B) (at level 53).
 Notation "A >=' B" := (bgreaterthan A B) (at level 53).
 Notation "!' A" := (bnot A) (at level 50, left associativity).
 Notation "A &&' B" := (band A B) (at level 51, left associativity).
 Notation "A ||' B" := (bor A B) (at level 52, left associativity). 
+Notation "A ==' B" := (bequal A B) (at level 54, left associativity).
 
 (* Asemanator ca la numerele naturale, fac functii pentru fiecare operatie, deoarece au aparut cazurile in care pot avea erori*)
 
@@ -280,6 +293,12 @@ Definition or_ErrorBool (n1 n2 : ErrorBool) : ErrorBool :=
     | bul v1, bul v2 => bul (orb v1 v2)
   end.
 
+Definition equal_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
+  match n1, n2 with
+    | error_nat, _ => error_bool
+    | _, error_nat => error_bool
+    | num v1, num v2 => bul (eqb v1 v2)
+  end.
 Reserved Notation "B ={ S }=> B'" (at level 70).
 Inductive beval : BExp -> Env -> ErrorBool -> Prop :=
  | e_error : forall sigma,
@@ -312,6 +331,10 @@ Inductive beval : BExp -> Env -> ErrorBool -> Prop :=
   a1 ={ sigma }=> i1 ->
   a2 ={ sigma }=> i2 ->
   b = (or_ErrorBool i1 i2) -> (a1 ||' a2) ={ sigma }=> b
+ | e_equal : forall a1 a2 i1 i2 sigma b,
+  a1 =[ sigma ]=> i1 ->
+  a2 =[ sigma ]=> i2 ->
+  b = (equal_ErrorBool i1 i2) -> a1 ==' a2 ={ sigma }=> b
 where "B ={ S }=> B'" := ( beval B S B').
 
 Example eroare_bool : band (10 <=' 5) (100 >=' "n") ={ env }=> error_bool.
@@ -330,22 +353,47 @@ Qed.
 
 (* Pentru siruri de caractere *)
 
-(* Inductive CExp :=
- | cchar : ErrorChar -> CExp
+Inductive CExp :=
+ | cchar : Char -> CExp
  | cvar : string -> CExp.
 
-Coercion cchar : ErrorChar >-> CExp.
+Coercion cchar : Char >-> CExp.
 Coercion cvar : string >-> CExp.
 
-Definition char_length (c : ErrorChar) : ErrorNat :=
-  match c with
-    | error_char => error_char
-    | char v1 => char (strlen v1)
-  end. 
- *)
+(* Functii pentru char-uri *)
 
+Local Open Scope lazy_bool_scope.
+ 
+Fixpoint Equal_strings (s1 s2 : Char) : ErrorBool :=
+ match s1, s2 with
+ | EmptyString, EmptyString => true
+ | String c1 s1', String c2 s2' => ( Ascii.eqb c1 c2 &&& Equal_strings s1' s2')
+ | _,_ => false
+ end.
 
-
-
-
+Check Equal_strings.
+Compute  Equal_strings "asd" "asd".
   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
