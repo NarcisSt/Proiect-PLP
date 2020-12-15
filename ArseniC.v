@@ -61,7 +61,9 @@ Inductive AExp :=
  | aminus : AExp -> AExp -> AExp
  | amul : AExp -> AExp -> AExp
  | adiv : AExp -> AExp -> AExp
- | amod : AExp -> AExp -> AExp.
+ | amod : AExp -> AExp -> AExp
+ | to_nat : string -> AExp
+ | to_int : string -> AExp.
 
 Coercion avar : string >-> AExp.
 Coercion anum : ErrorNat >-> AExp.
@@ -92,7 +94,8 @@ Inductive BExp :=
  | bnot : BExp -> BExp
  | band : BExp -> BExp -> BExp
  | bor : BExp -> BExp -> BExp
- | bequal : AExp -> AExp -> BExp.
+ | bequal : AExp -> AExp -> BExp
+ | to_bool : string -> BExp.
 
 Coercion bvar : string >-> BExp.
 
@@ -124,7 +127,8 @@ Inductive CExp :=
  | cvar : string -> CExp
  | cequal : ErrorString -> ErrorString -> CExp
  | clength : ErrorString -> CExp
- | cappend : ErrorString -> ErrorString -> CExp.
+ | cappend : ErrorString -> ErrorString -> CExp
+ | to_char : string -> CExp.
 
 Coercion cvar : string >-> CExp.
 
@@ -152,12 +156,15 @@ Inductive Stmt :=
  | while : BExp -> Stmt -> Stmt
  | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
  | ifthen : BExp -> Stmt -> Stmt
+ | break : Stmt
+ | continue : Stmt
  | fct_declare : string -> Stmt -> Stmt -> Stmt
  | fct_call : string -> list Z -> Stmt
  | switch : AExp -> list Case -> Stmt
  with Case :=
  | case : AExp -> Stmt -> Case
  | default' : Stmt -> Case.
+ 
 
 Notation "'unsigned' X" := (nat_decl X)(at level 80).
 Notation "'int' X" := (int_decl X)(at level 80).
@@ -182,6 +189,11 @@ Notation " 'default'' S 'en'" := (default' S)(at level 84).
 
 Notation " 'declare' X S1 'begin' { S2 } 'endf' " := (fct_declare X S1 S2)(at level 78).
 Notation " 'call' X 'begin' L 'endf'" := (fct_call X L)(at level 68).
+
+Notation "'(int)' { A }" := (to_int A)( at level 35).
+Notation "'(nat)' { A }" := (to_nat A)( at level 35).
+Notation "'(bool)' { A }" := (to_bool A)( at level 35).
+Notation "'(char)' { A }" := (to_char A)( at level 35).
 
 Check (unsigned "a").
 Check ("a" :n= 3).
@@ -230,6 +242,20 @@ declare "fun" int "a"
 
 Check (call "fun" begin [10;20] endf).
 
+Check (
+
+int "x";;
+int "y";;
+"x" :i= 1;;
+"y" :i= 4;;
+while' ( "x" <' "y" ) {
+  "x" :i= "x" +' 1;;
+  if' ("x" ==' 2 ) then'
+      break 
+  end'
+}
+
+).
 
 
 
@@ -561,54 +587,4 @@ Inductive ceval : CExp -> Env -> ErrorString -> Prop :=
  | length : forall c1 i1 sigma s,
   c1 -[ sigma ]-> i1 -> s = (length_ErrorString i1) -> ( length ( c1 )) -[ sigma ]-> s
 where "c -[ sigma ]-> c'" := ( ceval c sigma c'). *)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
