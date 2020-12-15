@@ -1,13 +1,17 @@
-Require Import Arith.
-Require Import Bool.
-Require Import Coq.Strings.Byte.
-Require Import Ascii.
+(* Librariile necesare pt a lucra cu stringuri*)
 Require Import Strings.String.
 Local Open Scope string_scope.
 Local Open Scope list_scope. 
 Scheme Equality for string.
 
-(* Librariile necesare pt a lucra cu stringuri*)
+(* Librariile necesare pt a lucra cu int *)
+Require Import Coq.ZArith.ZArith.
+Open Scope Z_scope.
+
+(* Librariile necesare pentru a lucra cu liste *)
+Require Import Coq.Lists.List.
+Import ListNotations.
+Scheme Equality for list.
 
 (* Acum voi inlocui tipul nat pe care l am mai folosit cu un nou tip: ErrorNar, care trateaza si cazurile mai speciale *)
 Inductive ErrorNat :=
@@ -18,6 +22,16 @@ Check error_nat.
 Check num.
 Coercion num : nat >-> ErrorNat.
 
+(* La fel pentru int *)
+
+Inductive ErrorInt :=
+ | error_int : ErrorInt
+ | int : Z -> ErrorInt.
+Check ErrorInt.
+Check error_int.
+Check int.
+Coercion int : Z >-> ErrorInt.
+ 
 (* Same pentru bool *)
 
 Inductive ErrorBool :=
@@ -28,31 +42,33 @@ Check error_bool.
 Check bul.
 Coercion bul : bool >-> ErrorBool.
 
-(* Creez tipul pentru stringuri ca siruri de caractere ascii *)
+(* Fac un tip cu erori si pentru string, pentru moment*)
 
-
-Inductive string : Type :=
-  | EmptyString : string
-  | String : ascii -> string -> string.
-
-
-Delimit Scope string_scope with string.
-Local Open Scope string_scope.
-
+Inductive ErrorString :=
+ | error_string : ErrorString
+ | char : string -> ErrorString.
+Check ErrorString.
+Check error_string.
+Check char.
+Coercion char : string >-> ErrorString.
 
 (* Creez un tip in care adun toate celelalte tipuri *)
 
 Inductive Tipuri :=
  | error_undecl : Tipuri (* Sa nu folosesc variabile nedeclarate *)
  | error_assign : Tipuri (* Sa nu atribui valori de alt tip decat tipul variabilei *)
- | default : Tipuri (* O valoare default care se pune in variabile la declarere (0 pt num, false pt bul si " " pt char) *)
+ | default : Tipuri (* O valoare default care se pune in variabile la declarere *)
  | tip_nat : ErrorNat -> Tipuri
  | tip_bul : ErrorBool -> Tipuri
- | tip_char : string -> Tipuri.
+ | tip_int : ErrorInt -> Tipuri
+ | tip_string : ErrorString -> Tipuri.
 Check tip_nat.
-Check tip_char.
+Check tip_string.
+Check tip_int.
+Check tip_bul.
+Check Tipuri.
 
-(* Scheme Equality for Tipuri. *)
+Scheme Equality for Tipuri.
 
 (* Deoarece am construit tipul "Tipuri", nu mai trebuie sa fac cate un enviroment pentru toate tipurile, ci doar pentru el*)
 Definition Env := string -> Tipuri.
@@ -81,16 +97,17 @@ Definition Egalitate_tipuri (t1 : Tipuri)(t2 : Tipuri) : bool :=
                    | tip_bul _y => true
                    | _ => false
                    end
- | tip_char _x => match t2 with
-                   | tip_char _y => true
+ | tip_string _x => match t2 with
+                   | tip_string _y => true
                    | _ => false
                   end
-
+ | tip_int _x => match t2 with  
+                   | tip_int _y => true
+                   | _ => false
+                   end
  end.
-
-Compute (Egalitate_tipuri (tip_nat 2)(tip_nat 123)).
-Compute (Egalitate_tipuri (tip_nat 2)(tip_bul true)).
-
+Check Egalitate_tipuri.
+Check tip_nat.
 (* Definesc un environment in care practic spun ca initial nici o variabila nu este declarata*)
 Definition env : Env := fun x => error_undecl. 
 (* Check (env "x").
@@ -98,7 +115,7 @@ Compute (env "x"). *)
 
 (* Acum fac functia de atribuire a unei valori unei variabile*)
 
-Definition update (env : Env) (x : string) (v : Tipuri ) : Env :=
+(* Definition update (env : Env) (x : string) (v : Tipuri ) : Env :=
   fun y =>
     if (eqb y x)
     then
@@ -117,11 +134,12 @@ Notation "S [ V /' X ]" := (update S X V) (at level 1).
 
 Check (update env "y" default).
 Compute (update (update env "y" (default)) "y" (tip_bul true) "y").
-
-(* Pentru nr. naturale *)
+ *)
+(* Pentru expr aritmetice *)
 Inductive AExp := 
  | anum : ErrorNat -> AExp
  | avar : string -> AExp
+ | aint : ErrorInt -> AExp
  | aplus : AExp -> AExp -> AExp
  | aminus : AExp -> AExp -> AExp
  | amul : AExp -> AExp -> AExp
@@ -130,16 +148,23 @@ Inductive AExp :=
 
 Coercion avar : string >-> AExp.
 Coercion anum : ErrorNat >-> AExp.
+Coercion aint : ErrorInt >-> AExp.
 
 Notation "A +' B" := (aplus A B)(at level 60, right associativity).
 Notation "A -' B" := (aminus A B)(at level 60, right associativity).
 Notation "A *' B" := (amul A B)(at level 59, right associativity).
 Notation "A /' B" := (adiv A B)(at level 59, right associativity).
 Notation "A %' B" := (amod A B)(at level 58, right associativity).
+Check ("a" +' "b").
+Check ("a" -' "b").
+Check ("a" +' 3).
+Check ("a" -' (-5)).
+Check ("a" /' 0).
+Check (7 %' 2).
 
 (* Este nevoie de anumite functii pentru a trata si cazurile cu erori, cate o functie pentru fiecare operatie*)
 
-Definition plus_ErrorNat (n1 n2 : ErrorNat) : ErrorNat :=
+(* Definition plus_ErrorNat (n1 n2 : ErrorNat) : ErrorNat :=
   match n1, n2 with
     | error_nat, _ => error_nat
     | _, error_nat => error_nat
@@ -234,32 +259,49 @@ Proof.
     - apply const.
     - apply const.
     - simpl. reflexivity.
-Qed.
+Qed. *)
 
 
-(* Acum pentru booleene *)
+(* Acum pentru expresii booleene *)
 Inductive BExp :=
  | berror 
  | btrue
  | bfalse
  | bvar : string -> BExp
  | blessthan : AExp -> AExp -> BExp
+ | beqlessthan : AExp -> AExp -> BExp
  | bgreaterthan : AExp -> AExp -> BExp
+ | beqgreaterthan : AExp -> AExp -> BExp
  | bnot : BExp -> BExp
  | band : BExp -> BExp -> BExp
  | bor : BExp -> BExp -> BExp
  | bequal : AExp -> AExp -> BExp.
 
-Notation "A <=' B" := (blessthan A B) (at level 53).
-Notation "A >=' B" := (bgreaterthan A B) (at level 53).
+Coercion bvar : string >-> BExp.
+
+Notation "A <' B" := (blessthan A B) (at level 53).
+Notation "A <=' B" := (beqlessthan A B) (at level 53).
+Notation "A >' B" := (bgreaterthan A B) (at level 53).
+Notation "A >=' B" := (beqgreaterthan A B) (at level 53).
 Notation "!' A" := (bnot A) (at level 50, left associativity).
 Notation "A &&' B" := (band A B) (at level 51, left associativity).
 Notation "A ||' B" := (bor A B) (at level 52, left associativity). 
 Notation "A ==' B" := (bequal A B) (at level 54, left associativity).
+Check berror.
+Check btrue.
+Check bfalse.
+Check (!' "a").
+Check (!' btrue).
+Check ("a" <' "b").
+Check ("a" <=' "b").
+Check ("a" >' "b").
+Check ("a" >=' "b").
+Check ("a" &&' bfalse).
+Check ("a" ||' "b").
 
 (* Asemanator ca la numerele naturale, fac functii pentru fiecare operatie, deoarece au aparut cazurile in care pot avea erori*)
 
-Definition lessthan_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
+(* Definition lessthan_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
   match n1, n2 with
     | error_nat, _ => error_bool
     | _, error_nat => error_bool
@@ -350,30 +392,128 @@ Proof.
       + simpl. auto.
     - simpl. reflexivity.
 Qed.
+ *)
 
-(* Pentru siruri de caractere *)
+(* Pentru expresii cu siruri de caractere *)
 
 Inductive CExp :=
- | cchar : Char -> CExp
- | cvar : string -> CExp.
+ | cconst : ErrorString -> CExp
+ | cvar : string -> CExp
+ | cequal : ErrorString -> ErrorString -> CExp
+ | clength : ErrorString -> CExp
+ | cappend : ErrorString -> ErrorString -> CExp.
 
-Coercion cchar : Char >-> CExp.
 Coercion cvar : string >-> CExp.
 
-(* Functii pentru char-uri *)
+Notation " A =s= B " := (cequal A B) (at level 30).
+Notation " 'length' ( A ) " := (clength A) (at level 31).
+Notation " A +s+ B " := (cappend A B) (at level 32).
 
-Local Open Scope lazy_bool_scope.
+Check ("asd" =s= "asd").
+Check (length ( "asd" )).
+Check ("asd" +s+ "fgh").
+
+(* Functii stringuri *)
+
+(* Definition equal_ErrorString (c1 c2 : ErrorString) : ErrorBool :=
+  match c1, c2 with
+    | error_string, _ => error_bool
+    | _, error_string => error_bool
+    | char c1, char c2 => bul (eqb c1 c2)
+  end.
+
+Definition append_ErrorString (c1 c2 : ErrorString) : ErrorString :=
+  match c1, c2 with
+    | error_string, _ => error_string
+    | _, error_string => error_string
+    | char c1, "" => error_string
+    | "", char c2 => error_string
+    | char c1, char c2 => char (append c1 c2)
+  end.
+
+(* Definition length_ErrorString (c1 : ErrorString) : ErrorNat :=
+  match c1 with
+    | error_string => error_nat
+    | char c1 => num (length c1)
+  end. Bug aici, sa revii!! *)
+
+Reserved Notation "C -[ S ]-> C'" (at level 70).
+Inductive ceval : CExp -> Env -> ErrorString -> Prop :=
+ | const : forall c sigma, cconst c -[ sigma ]-> c
+ | var : forall c sigma, cvar c -[ sigma ]-> match (sigma c) with
+                                               | tip_string x => x
+                                               | _ => error_string
+                                             end
+ | equal : forall c1 c2 i1 i2 sigma s,
+  c1 -[ sigma ]-> i1 ->
+  c2 -[ sigma ]-> i2 ->
+  s = (equal_ErrorString i1 i2) -> (c1 =s= c2) -[ sigma ]-> s
+ | append : forall c1 c2 i1 i2 sigma s,
+  c1 -[ sigma ]-> i1 ->
+  c2 -[ sigma ]-> i2 ->
+  s = (append_ErrorString i1 i2) -> (c1 =s= c2) -[ sigma ]-> s
+ | length : forall c1 i1 sigma s,
+  c1 -[ sigma ]-> i1 -> s = (length_ErrorString i1) -> ( length ( c1 )) -[ sigma ]-> s
+where "c -[ sigma ]-> c'" := ( ceval c sigma c'). *)
+
+
+(* Statementuri *)
+Print Coq.Lists.List.
+
+Inductive Stmt :=
+ | nat_decl : string -> Stmt
+ | nat_assign : string -> AExp -> Stmt
+ | int_decl : string -> Stmt
+ | int_assign : string -> AExp -> Stmt
+ | bool_decl : string -> Stmt
+ | bool_assign : string -> BExp -> Stmt
+ | string_decl : string -> Stmt
+ | string_assign : string -> CExp -> Stmt
+ | sequence : Stmt -> Stmt -> Stmt
+ | while : BExp -> Stmt -> Stmt
+ | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
+ | ifthen : BExp -> Stmt -> Stmt.
  
-Fixpoint Equal_strings (s1 s2 : Char) : ErrorBool :=
- match s1, s2 with
- | EmptyString, EmptyString => true
- | String c1 s1', String c2 s2' => ( Ascii.eqb c1 c2 &&& Equal_strings s1' s2')
- | _,_ => false
- end.
 
-Check Equal_strings.
-Compute  Equal_strings "asd" "asd".
-  
+Notation "'unsigned' X" := (nat_decl X)(at level 80).
+Notation "'int' X" := (int_decl X)(at level 80).
+Notation "'bool' X" := (bool_decl X)(at level 80).
+Notation "'char' X" := (string_decl X)(at level 80).
+Notation "X :n= A" := (nat_assign X A)(at level 80).
+Notation "X :i= A" := (int_assign X A)(at level 80).
+Notation "X :b= A" := (bool_assign X A)(at level 80).
+Notation "X :s= A" := (string_assign X A)(at level 80).
+Notation "S1 ;; S2" := (sequence S1 S2)(at level 93).
+Notation "'if' B 'then' S1 'end'" := (ifthen B S1)(at level 83).
+Notation "'if' B 'then' S1 'else' S2 'end'" := (ifthenelse B S1 S2)(at level 83).
+Notation "'for' ( A ~ B ~ C ) { S }" := (A ;; while B  (S ;; C )) (at level 97).
+Notation "'while' ( B ) { S }" := (while B S) (at level 83).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
