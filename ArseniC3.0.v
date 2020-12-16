@@ -4,11 +4,6 @@ Local Open Scope string_scope.
 Local Open Scope list_scope. 
 Scheme Equality for string.
 
-(* (* Librariile necesare pentru a lucra cu liste *)
-Require Import Coq.Lists.List.
-Import ListNotations.
-Scheme Equality for list.
- *)
 
 (* Acum voi inlocui tipul nat pe care l am mai folosit cu un nou tip: ErrorNar, care trateaza si cazurile mai speciale *)
 Inductive ErrorNat :=
@@ -457,8 +452,127 @@ Inductive Vector :=
 
 Check Nat_vector.
 
+(* Statementuri *)
+
+Inductive Stmt :=
+ | nat_decl : string -> Stmt
+ | nat_assign : string -> AExp -> Stmt
+ | bool_decl : string -> Stmt
+ | bool_assign : string -> BExp -> Stmt
+ | string_decl : string -> Stmt
+ | string_assign : string -> CExp -> Stmt
+ | sequence : Stmt -> Stmt -> Stmt
+ | while : BExp -> Stmt -> Stmt
+ | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
+ | ifthen : BExp -> Stmt -> Stmt
+ | break : Stmt
+ | continue : Stmt
+ | fct_declare : string -> Stmt -> Stmt -> Stmt
+ | fct_call_n : string -> list nat -> Stmt
+ | fct_call_s : string -> list string -> Stmt
+ | switch : AExp -> list Case -> Stmt
+ with Case :=
+ | case : AExp -> Stmt -> Case
+ | default' : Stmt -> Case.
+ 
+
+Notation "'unsigned' X" := (nat_decl X)(at level 80).
+Notation "'bool' X" := (bool_decl X)(at level 80).
+Notation "'char' X" := (string_decl X)(at level 80).
+
+Notation "X :n= A" := (nat_assign X A)(at level 80).
+Notation "X :b= A" := (bool_assign X A)(at level 80).
+Notation "X :s= A" := (string_assign X A)(at level 80).
+
+Notation "S1 ;; S2" := (sequence S1 S2)(at level 93).
+
+Notation "'if'' B 'then'' S1 'end''" := (ifthen B S1)(at level 83).
+Notation "'if'' B 'then'' S1 'else'' S2 'end''" := (ifthenelse B S1 S2)(at level 83).
+Notation "'for' ( A ~ B ~ C ) { S }" := (A ;; while B  (S ;; C )) (at level 97).
+Notation "'while'' ( B ) { S }" := (while B S) (at level 83).
+
+Notation " 'switch' A 'en' L 'ends' " := (switch A L)(at level 83).
+Notation " 'case' A 'en' S 'en' " := (case A S)(at level 84).
+Notation " 'default'' S 'en'" := (default' S)(at level 84).
+
+Notation " 'declare' X S1 'begin' { S2 } 'endf' " := (fct_declare X S1 S2)(at level 78).
+Notation " 'call_n' X 'begin' L 'endf'" := (fct_call_n X L)(at level 68).
+Notation " 'call_s' X 'begin' L 'endf'" := (fct_call_s X L)(at level 68).
+
+Notation "'(nat)' { A }" := (to_nat A)( at level 35).
+Notation "'(bool)' { A }" := (to_bool A)( at level 35).
+Notation "'(char)' { A }" := (to_char A)( at level 35).
+
+(* Librariile necesare pentru a lucra cu liste *)
+Require Import Coq.Lists.List.
+Import ListNotations.
+Scheme Equality for list.
+
+Check (unsigned "a").
+Check ("a" :n= 3).
+
+Check (bool "a").
+Check ("a" :b= bfalse).
+
+Check (char "c").
+Check ("c" :s= "abc").
+
+Check (
+
+unsigned "a";;
+unsigned "b";;
+unsigned "sum";;
+"sum" :n= 0;;
+"a" :n= 1;;
+"b" :n= 5;;
+char "rasp";;
+
+if' ("a" <=' "b") then'
+  "rasp" :s= "a este mai mic sau egal cu b"
+else'
+  "rasp" :s= "a este mai mare decat b"
+end'
+).
+
+Check (
+
+switch 6 en [
+  case 6 en "c" :n= 6 en ;
+  case 9 en "c" :n= 9 en ;
+  default' "c" :n= 0 en 
+]
+ends
+).
 
 
+Check (call_n "fun" begin [10;20] endf).
+
+Check (call_s "fun" begin ["a";"b"] endf).
+
+Check (
+
+unsigned "x";;
+unsigned "y";;
+"x" :n= 1;;
+"y" :n= 4;;
+while' ( "x" <' "y" ) {
+  "x" :n= "x" +' 1;;
+  if' ("x" ==' 2 ) then'
+      break 
+  end'
+}
+).
+
+Check (
+declare "fun" unsigned "a" 
+  begin
+    {
+      unsigned "b" ;;
+      "b" :n= ("a" *' 10)
+}endf
+).
+
+(* Greul de acu vine :((( ☹ *)
 
 
 
