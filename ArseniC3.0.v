@@ -462,6 +462,12 @@ Inductive Stmt :=
  | string_decl : string -> Stmt
  | string_assign : string -> CExp -> Stmt
  | sequence : Stmt -> Stmt -> Stmt
+ | nat_decl_vector : string -> Vector -> Stmt
+ | nat_assign_vector : string -> Vector -> Stmt
+ | bool_decl_vector : string -> Vector -> Stmt
+ | bool_assign_vector : string -> Vector -> Stmt
+ | string_decl_vector : string -> Vector -> Stmt
+ | string_assign_vector : string -> Vector -> Stmt
  | while : BExp -> Stmt -> Stmt
  | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
  | ifthen : BExp -> Stmt -> Stmt
@@ -479,6 +485,14 @@ Inductive Stmt :=
 Notation "'unsigned' X" := (nat_decl X)(at level 80).
 Notation "'bool' X" := (bool_decl X)(at level 80).
 Notation "'char' X" := (string_decl X)(at level 80).
+
+Notation "V [ N ]n" := ( nat_decl_vector V num N)(at level 40).
+Notation "V [ N ]b" := ( bool_decl_vector V num N)(at level 40).
+Notation "V [ N ]s" := ( string_decl_vector V num N)(at level 40).
+
+Notation "V [ N ]n={ E1 ; E2 ; .. ; En }" := ( nat_assign_vector V ( Nat_vector N (cons num(E1) (cons num(E2) .. (cons num(En) nil) ..) ) ) )(at level 40).
+Notation "V [ N ]b={ E1 ; E2 ; .. ; En }" := ( bool_assign_vector V ( Bool_vector N (cons bul(E1) (cons bul(E2) .. (cons bul(En) nil) ..) ) ) )(at level 40).
+Notation "V [ N ]s={ E1 ; E2 ; .. ; En }" := ( string_assign_vector V ( String_vector N (cons string(E1) (cons string(E2) .. (cons string(En) nil) ..) ) ) )(at level 40).
 
 Notation "X :n= A" := (nat_assign X A)(at level 80).
 Notation "X :b= A" := (bool_assign X A)(at level 80).
@@ -573,56 +587,4 @@ declare "fun" unsigned "a"
 ).
 
 (* Greul de acu vine :((( ☹ *)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
