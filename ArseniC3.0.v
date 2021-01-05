@@ -4,7 +4,6 @@ Local Open Scope string_scope.
 Local Open Scope list_scope. 
 Scheme Equality for string.
 
-
 (* Acum voi inlocui tipul nat pe care l am mai folosit cu un nou tip: ErrorNar, care trateaza si cazurile mai speciale *)
 Inductive ErrorNat :=
  | error_nat: ErrorNat
@@ -118,8 +117,7 @@ Inductive AExp :=
  | aminus : AExp -> AExp -> AExp
  | amul : AExp -> AExp -> AExp
  | adiv : AExp -> AExp -> AExp
- | amod : AExp -> AExp -> AExp
- | to_nat : string -> AExp.
+ | amod : AExp -> AExp -> AExp.
 
 Coercion avar : string >-> AExp.
 Coercion anum : ErrorNat >-> AExp.
@@ -176,7 +174,35 @@ Definition mod_ErrorNat (n1 n2 : ErrorNat) : ErrorNat :=
     | _, 0 => error_nat
     | num v1, num v2 => (Nat.modulo v1 v2) 
   end.
+
 Check mod_ErrorNat.
+
+(* Functiile pentru castare *)
+
+Definition bool_to_nat (b : bool) : ErrorNat :=
+  match b with 
+  | false => 0 
+  | true => 1
+  end.
+
+Notation "'(b_nat)' { A }" := (bool_to_nat A)( at level 35).
+
+Compute bool_to_nat true.
+Compute bool_to_nat false.
+Compute ((b_nat) { false }).
+
+Definition str_to_nat (s : string) : ErrorNat :=
+  match s with 
+  | unu => 1
+  end.
+
+Notation "'(s_nat)' { A }" := (str_to_nat A)( at level 35).
+
+Compute str_to_nat "unu".
+Compute ((s_nat) { "unu" }).
+(* Aici am dat peste o problema de redundanta *)
+
+
 
 (* Am pus si semantica Big Step pentru expresii aritmetice*)
 Reserved Notation "A =[ S ]=> N" (at level 70).
@@ -245,8 +271,7 @@ Inductive BExp :=
  | bnot : BExp -> BExp
  | band : BExp -> BExp -> BExp
  | bor : BExp -> BExp -> BExp
- | bequal : AExp -> AExp -> BExp
- | to_bool : string -> BExp.
+ | bequal : AExp -> AExp -> BExp.
 
 
 
@@ -314,6 +339,20 @@ Definition equal_ErrorBool (n1 n2 : ErrorNat) : ErrorBool :=
     | num v1, num v2 => bul (Nat.eqb v1 v2)
   end.
 
+(* Functia de castare *)
+
+Definition nat_to_bool (n : nat) : ErrorBool :=
+  match n with
+  | 0 => false
+  | _ => true
+  end.
+
+Notation "'(n_bool)' { A }" := (nat_to_bool A)( at level 35).
+
+Compute nat_to_bool 12.
+Compute nat_to_bool 0.
+Compute ((n_bool) { 123 }).
+
 (* Am pus si semantica Big Step pentru expresii booleene*)
 
 Reserved Notation "B ={ S }=> B'" (at level 70).
@@ -377,8 +416,7 @@ Inductive CExp :=
  | cvar : string -> CExp
  | cequal : ErrorString -> ErrorString -> CExp
  | cstrlen : ErrorString -> CExp
- | cappend : ErrorString -> ErrorString -> CExp
- | to_char : string -> CExp.
+ | cappend : ErrorString -> ErrorString -> CExp.
 
 
 Coercion cvar : string >-> CExp.
@@ -393,7 +431,7 @@ Check ("asd" +s+ "fgh").
 
 (* Functii stringuri *)
 
-Definition append_ErrorString (c1 c2 : ErrorString) : ErrorString :=
+Definition append_s (c1 c2 : ErrorString) : ErrorString :=
   match c1, c2 with
     | error_string, _ => error_string
     | _, error_string => error_string
@@ -404,9 +442,10 @@ Definition append_ErrorString (c1 c2 : ErrorString) : ErrorString :=
 
 
 Compute append "asd" "asd".
+Compute append_s "asd" "asd".
 Compute eqb "asd" "asd".
 
-Definition equal_ErrorString (c1 c2 : ErrorString) : ErrorBool :=
+Definition equal_s (c1 c2 : ErrorString) : ErrorBool :=
   match c1, c2 with
     | error_string, _ => error_bool
     | _, error_string => error_bool
@@ -415,11 +454,47 @@ Definition equal_ErrorString (c1 c2 : ErrorString) : ErrorBool :=
 
 Compute length "asd".
 
-Definition strlen_ErrorString (c1 : ErrorString) : ErrorNat :=
+Definition strlen_s (c1 : ErrorString) : ErrorNat :=
   match c1 with
     | error_string => error_nat
     | char c1 => num (length c1)
   end.
+
+Compute strlen_s "asd".
+
+(* Functii castare *)
+
+Definition b_to_str (b : bool) : ErrorString :=
+  match b with
+  | true => "true"
+  | false => "false"
+  end.
+
+Notation "'(b_char)' { A }" := (b_to_str A)( at level 35).
+
+Compute ((b_char) { true }).
+Compute ((b_char) { false }).
+
+Definition n_to_str (n : nat) : ErrorString :=
+  match n with
+  | 0 => "zero"
+  | 1 => "unu"
+  | 2 => "doi"
+  | 3 => "trei"
+  | 4 => "patru"
+  | 5 => "cinci"
+  | 6 => "sase"
+  | 7 => "sapte"
+  | 8 => "opt"
+  | 9 => "noua"
+  | _ => "numar din doua cifre"
+  end.
+
+Notation "'(n_char)' { A }" := (n_to_str A)( at level 35).
+
+Compute ((n_char) { 5 }).
+Compute ((n_char) { 11 }).
+
 
 (* Am pus si semantica Big Step pentru operatii pe stringuri*)
 
@@ -430,12 +505,12 @@ Inductive ceval : CExp -> Env -> ErrorString -> Prop :=
                                                | tip_string x => x
                                                | _ => error_string
                                              end
- (* | append : forall c1 c2 i1 i2 sigma s,
+ (*| append : forall c1 c2 i1 i2 sigma s,
   c1 -[ sigma ]-> i1 ->
   c2 -[ sigma ]-> i2 ->
   s = (append_ErrorString i1 i2) -> (c1 +s+ c2) -[ sigma ]-> s
  | length : forall c1 i1 sigma s,
-  c1 -[ sigma ]-> i1 -> s = (length_ErrorString i1) -> ( length ( c1 )) -[ sigma ]-> s 
+  c1 -[ sigma ]-> i1 -> s = (length_ErrorString i1) -> ( strlen ( c1 )) -[ sigma ]-> s 
  | equal : forall c1 c2 i1 i2 sigma s,
   c1 -[ sigma ]-> i1 ->
   c2 -[ sigma ]-> i2 ->
@@ -513,9 +588,6 @@ Notation " 'declare' X S1 'begin' { S2 } 'endf' " := (fct_declare X S1 S2)(at le
 Notation " 'call_n' X 'begin' L 'endf'" := (fct_call_n X L)(at level 68).
 Notation " 'call_s' X 'begin' L 'endf'" := (fct_call_s X L)(at level 68).
 
-Notation "'(nat)' { A }" := (to_nat A)( at level 35).
-Notation "'(bool)' { A }" := (to_bool A)( at level 35).
-Notation "'(char)' { A }" := (to_char A)( at level 35).
 
 (* Librariile necesare pentru a lucra cu liste *)
 Require Import Coq.Lists.List.
@@ -586,5 +658,5 @@ declare "fun" unsigned "a"
 }endf
 ).
 
-(* Greul de acu vine :((( ☹ *)
+(* Semantica pentru statementuri *)
 
