@@ -94,14 +94,14 @@ Check ("a" ||' "b").
 (* Pentru expresii cu siruri de caractere *)
 
 Inductive CExp :=
- | null : CExp
- | cuvant : ErrorString -> CExp.
+ | cstring : ErrorString -> CExp
+ | cvar : string -> CExp.
 
 
-Coercion cuvant : ErrorString >-> CExp.
+Coercion cvar : string >-> CExp.
 Scheme Equality for CExp.
 
-(* Functii stringuri *)
+(* Functii stringuri *) 
 
 Definition append_s (c1 c2 : ErrorString) : ErrorString :=
   match c1, c2 with
@@ -663,11 +663,11 @@ Qed.
 
 Reserved Notation "C -[ S ]-> C'" (at level 70).
 Inductive ceval : CExp -> Env -> ErrorString -> Prop :=
- | c_null : forall sigma, null -[ sigma ]-> error_string
-(*  | c_cuvant : forall c sigma, cuvant c -[ sigma ]-> match (sigma c) with
+ | c_const : forall sigma s, cstring s -[ sigma ]-> s
+ | c_var : forall c sigma, cvar c -[ sigma ]-> match (sigma c) with
                                                | tip_string x => x
                                                | _ => error_string
-                                             end *) 
+                                             end 
 where "c -[ sigma ]-> c'" := ( ceval c sigma c').
 
 (* Semantica pentru statementuri *)
@@ -745,9 +745,8 @@ Proof.
     + reflexivity.
 Qed.
 
-Example decl_assign_string : exists sigma1, ()
 
-Example decl_assign_bool : exists sigma1, (bool "b" ;; "b" :b= true) -{ env1 }-> sigma1.
+
 
 
 
