@@ -61,6 +61,8 @@ Check (7 %' 2).
 (* Acum pentru expresii booleene *)
 Inductive BExp :=
  | berror : ErrorBool -> BExp
+ | btrue : BExp
+ | bfalse : BExp
  | bvar : string -> BExp
  | blessthan : AExp -> AExp -> BExp
  | beqlessthan : AExp -> AExp -> BExp
@@ -589,6 +591,8 @@ Fixpoint beval_fun (b : BExp) (sigma : Env) : ErrorBool :=
                 | error_bool => error_bool
                 | bul x' => x'
                 end
+  | btrue  => true
+  | bfalse  => false
   | bvar v => match (sigma v) with
               | tip_bul y => match y with
                                   | error_bool => error_bool
@@ -746,7 +750,11 @@ Proof.
 Qed.
 
 
-
+Example un_if : exists sigma1, if' ("x" <' 5) then' ("x" :n= 8) end' -{ env1 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_ifThen.
+  - eapply e_lessthan.
 
 
 
