@@ -431,6 +431,7 @@ Definition update (env : Env) (x : string) (v : Tipuri ) : Env :=
 
 Definition env0 : Env := fun n => error_undecl.
 Definition env1 : Env := fun x => 5.
+Definition env2 : Env := fun z => 19.
 
 (* Semnatica expresii aritmetice *)
 
@@ -554,35 +555,6 @@ Inductive aeval : AExp -> Env -> ErrorNat -> Prop :=
   n = mod_ErrorNat i1 i2 -> a1 %' a2 =[ sigma ]=> n
 where "a =[ sigma ]=> n" := ( aeval a sigma n).
 
-Example eroare_la_dif : 2 -' 3 =[ env0 ]=> error_nat.
-Proof.
-  eapply dif.
-    - apply const.
-    - apply const.
-    - simpl. reflexivity.
-Qed.
-Example eroare_la_div : 9 /' 0 =[ env0 ]=> error_nat.
-Proof.
-  eapply div.
-    - apply const.
-    - apply const.
-    - simpl. reflexivity.
-Qed.
-Example eroare_la_mod : 5 %' 0 =[ env0 ]=> error_nat.
-Proof.
-  eapply modd.
-    - apply const.
-    - apply const.
-    - simpl. reflexivity.
-Qed.
-Example plus_bun : 5 +' "x" =[ env1 ]=> 10.
-Proof.
-  eapply add.
-    - apply const.
-    - apply var.
-    - simpl. reflexivity.
-Qed. 
-
 (* Semnatica pt expresii booleene *)
 
 Fixpoint beval_fun (b : BExp) (sigma : Env) : ErrorBool :=
@@ -648,20 +620,6 @@ Inductive beval : BExp -> Env -> ErrorBool -> Prop :=
   a2 =[ sigma ]=> i2 ->
   b = (equal_ErrorBool i1 i2) -> a1 ==' a2 ={ sigma }=> b
 where "B ={ S }=> B'" := ( beval B S B').
-
-Example eroare_bool : band (10 <=' 5) (100 >=' "n") ={ env0 }=> error_bool.
-Proof.
-  eapply e_and.
-    - eapply e_lessthan.
-      + apply const.
-      + apply const.
-      + auto.
-    - eapply e_greaterthan.
-      + apply const.
-      + apply var.
-      + simpl. auto.
-    - simpl. reflexivity.
-Qed.
 
 (* Am pus si semantica Big Step pentru operatii pe stringuri*)
 
@@ -738,6 +696,51 @@ Inductive eval : Stmt -> Env -> Env -> Prop :=
     (switch A a1 s1 a2 s2 s3) -{ sigma }-> sigma'
 where "s -{ sigma }-> sigma'" := (eval s sigma sigma').
 
+Example eroare_la_dif : 2 -' 3 =[ env0 ]=> error_nat.
+Proof.
+  eapply dif.
+    - apply const.
+    - apply const.
+    - simpl. reflexivity.
+Qed.
+
+Example eroare_la_div : 9 /' 0 =[ env0 ]=> error_nat.
+Proof.
+  eapply div.
+    - apply const.
+    - apply const.
+    - simpl. reflexivity.
+Qed.
+
+Example eroare_la_mod : 5 %' 0 =[ env0 ]=> error_nat.
+Proof.
+  eapply modd.
+    - apply const.
+    - apply const.
+    - simpl. reflexivity.
+Qed.
+
+Example plus_bun : 5 +' "x" =[ env1 ]=> 10.
+Proof.
+  eapply add.
+    - apply const.
+    - apply var.
+    - simpl. reflexivity.
+Qed. 
+
+Example eroare_bool : band (10 <=' 5) (100 >=' "n") ={ env0 }=> error_bool.
+Proof.
+  eapply e_and.
+    - eapply e_lessthan.
+      + apply const.
+      + apply const.
+      + auto.
+    - eapply e_greaterthan.
+      + apply const.
+      + apply var.
+      + simpl. auto.
+    - simpl. reflexivity.
+Qed.
 
 Example decl_assign_nat : exists sigma1, (unsigned "a" ;; "a" :n= 10) -{ env0 }-> sigma1.
 Proof.
@@ -748,19 +751,69 @@ Proof.
     + eapply const.
     + reflexivity.
 Qed.
+Require Import Omega.
 
-
-Example un_if : exists sigma1, if' ("x" <' 5) then' ("x" :n= 8) end' -{ env1 }-> sigma1.
+Example un_if : exists sigma1, if' ("x" ==' 5) then' ("x" :n= 8) end' -{ env1 }-> sigma1.
 Proof.
   eexists.
   eapply e_ifThen.
-  - eapply e_lessthan.
+  - eapply e_equal.
+    + eapply var.
+    + eapply const.
+    + simpl. reflexivity.
+  - eapply e_nat_assign.
+    + eapply const.
+    + reflexivity.
+Qed.
 
+Example alt_if : exists sigma1, if' ("z" ==' 18) then' ("z" :n= 15) else' ("z" :n= 155) end' -{ env2 }-> sigma1.
+Proof.
+  eexists.
+  eapply  e_iffalse.
+  - eapply e_equal.
+    + eapply var.
+    + eapply const.
+    + auto.
+  - eapply e_nat_assign.
+    + eapply const.
+    + trivial.
+Qed.
 
+Example un_while : exists sigma1, (while' ( "x" ==' 5 ) { "x" :n= "x" +' 1 ;; "x" :n= "x" -' 1 } ) -{ env1 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_whiletrue.
+  - eapply e_equal.
+    + eapply var.
+    + eapply const.
+    + auto.
+  - eapply e_sequence.
+    + eapply e_sequence.
+      * eapply e_nat_assign.
+        -- eapply add.
+            ++ eapply var.
+            ++ eapply const.
+            ++ simpl. eauto.
+        -- reflexivity.
+      * eapply e_nat_assign.
+        -- eapply dif.
+            ++ eapply var.
+            ++ eapply const.
+            ++ simpl. eauto.
+        -- reflexivity.
+    + eapply e_whiletrue.
+Abort.
+(* Dupa cum era de asteptat, se creeaza o bucla infifnita *)
 
-
-
-
+Example alt_while : exists sigma1, (while' ( "x" ==' 6 ) { "x" :n= "x" +' 2 ;; "x" :n= "x" -' 4 } ) -{ env1 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_whilefalse.
+  eapply e_equal.
+    + eapply var.
+    + eapply const.
+    + auto.
+Qed.
 
 
 
