@@ -207,6 +207,7 @@ Inductive Stmt :=
  | bool_assign_vector : string -> Vector -> Stmt
  | string_decl_vector : string -> Vector -> Stmt
  | string_assign_vector : string -> Vector -> Stmt
+ | Class : string -> Stmt -> Stmt
  | while : BExp -> Stmt -> Stmt
  | ifthenelse : BExp -> Stmt -> Stmt -> Stmt
  | ifthen : BExp -> Stmt -> Stmt
@@ -231,6 +232,8 @@ Notation "V [ N ]s={ E1 ; E2 ; .. ; En }" := ( string_assign_vector V ( String_v
 Notation "X :n= A" := (nat_assign X A)(at level 80).
 Notation "X :b= A" := (bool_assign X A)(at level 80).
 Notation "X :s= A" := (string_assign X A)(at level 80).
+
+Notation "'class' A 'inceput' S 'sfarsit'" := (Class A S)(at level 81).
 
 Notation "S1 ;; S2" := (sequence S1 S2)(at level 93).
 
@@ -668,6 +671,9 @@ Inductive eval : Stmt -> Env -> Env -> Prop :=
 | e_whiletrue : forall b s sigma sigma',
   b ={ sigma }=> true ->
   (s ;; while b s) -{ sigma }-> sigma' -> while b s -{ sigma }-> sigma'
+| e_class : forall X s1 s2 sigma sigma',
+    (s1 ;; s2) -{ sigma }-> sigma' ->
+    (Class X (s1 ;; s2)) -{ sigma }-> sigma'
 | e_fct_declare : forall sigma sigma' nume s,
     sigma' = update sigma nume (code s) ->
     (fct_declare nume s) -{ sigma }-> sigma'
@@ -788,6 +794,17 @@ Proof.
   - eapply e_nat_assign.
     + eapply const.
     + reflexivity.
+Qed.
+
+Example classs : exists sigma1, (class "clasa 1" inceput unsigned "x" ;; bool "y" ;; char "z" sfarsit) -{ env0 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_class.
+  eapply e_sequence.
+  - eapply e_sequence.
+    + eapply e_nat_decl. reflexivity.
+    + eapply e_bool_decl. reflexivity.
+  -  eapply e_string_decl. reflexivity.
 Qed.
 
 Example alt_if : exists sigma1, if' ("z" ==' 18) then' ("z" :n= 15) else' ("z" :n= 155) end' -{ env2 }-> sigma1.
