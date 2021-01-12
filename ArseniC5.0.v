@@ -778,6 +778,84 @@ Proof.
     + eapply const.
     + trivial.
 Qed.
+Definition env3 : Env := fun y => 3.
+
+
+Example switch_case_one : exists sigma1, (unsigned "y" ;; "y" :n= 3 ;; switch' "y" +' 1 inceput case 4 sf "y" :n= 7 sfarsit case 5 sf "y" :n= 10 sfarsit default "y" :n= 0 sfarsit) -{ env3 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_sequence.
+  - eapply e_sequence.
+    + eapply e_nat_decl. reflexivity.
+    + eapply e_nat_assign.
+      * apply const.
+      * auto.
+  - eapply e_switch_case1.
+    + eapply add.
+      * eapply var.
+      * eapply const.
+      * auto.
+    + eapply e_equal.
+      * eapply const.
+      * eapply const.
+      * simpl. reflexivity.
+    + eapply e_nat_assign.
+      * apply const.
+      * reflexivity.
+Qed.
+
+Example switch_case_two : exists sigma1, (unsigned "y" ;; "y" :n= 3 ;; switch' "y" +' 1 inceput case 5 sf "y" :n= 7 sfarsit case 4 sf "y" :n= 10 +' 100 sfarsit default "y" :n= 0 sfarsit) -{ env3 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_sequence.
+  - eapply e_sequence.
+    + eapply e_nat_decl. reflexivity.
+    + eapply e_nat_assign.
+      * apply const.
+      * auto.
+  - eapply e_switch_case2.
+    + eapply add.
+      * eapply var.
+      * eapply const.
+      * auto.
+    + eapply e_equal.
+      * eapply const.
+      * eapply const.
+      * simpl. reflexivity.
+    + eapply e_nat_assign.
+      * eapply add.
+        -- eapply const.
+        -- eapply const.
+        -- simpl. auto.
+      * reflexivity.
+Qed.
+
+Example switch_case_default : exists sigma1, (unsigned "y" ;; "y" :n= 3 ;; switch' "y" +' 1 inceput case 5 sf "y" :n= 7 sfarsit case 6 sf "y" :n= 10 -' "y" sfarsit default "y" :n= 0 sfarsit) -{ env3 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_sequence.
+  - eapply e_sequence.
+    + eapply e_nat_decl. reflexivity.
+    + eapply e_nat_assign.
+      * apply const. 
+      * auto.
+  - eapply e_switch_default.
+    + eapply add.
+      * eapply var.
+      * eapply const.
+      * auto.
+    + eapply e_equal.
+      * eapply const.
+      * eapply const.
+      * simpl. reflexivity.
+    + eapply e_equal.
+      * eapply const.
+      * eapply const.
+      * simpl. reflexivity.
+    + eapply e_nat_assign.
+      * apply const.
+      * reflexivity.
+Qed.
 
 Example un_while : exists sigma1, (while' ( "x" ==' 5 ) { "x" :n= "x" +' 1 ;; "x" :n= "x" -' 1 } ) -{ env1 }-> sigma1.
 Proof.
@@ -805,6 +883,16 @@ Proof.
 Abort.
 (* Dupa cum era de asteptat, se creeaza o bucla infifnita *)
 
+(* Example decl_function_and_call : exists sigma1, ( declare "functie" begin { unsigned "nr" ;; bool "b" ;; "nr" :n= 2 } endf ;; (call "functie" endcall) ) -{ env0 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_sequence.
+  - eapply e_fct_declare.
+    reflexivity.
+  - eapply e_fct_call.
+    + auto.
+    + simpl. Abort. *)
+
 Example alt_while : exists sigma1, (while' ( "x" ==' 6 ) { "x" :n= "x" +' 2 ;; "x" :n= "x" -' 4 } ) -{ env1 }-> sigma1.
 Proof.
   eexists.
@@ -815,7 +903,12 @@ Proof.
     + auto.
 Qed.
 
-
+Example decl_function : exists sigma1, ( declare "functie" begin { unsigned "nr" ;; bool "b" ;; "nr" :n= 2 } endf ) -{ env0 }-> sigma1.
+Proof.
+  eexists.
+  eapply e_fct_declare.
+  reflexivity.
+Qed.
 
 
 
