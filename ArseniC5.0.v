@@ -742,6 +742,30 @@ Proof.
     - simpl. reflexivity.
 Qed.
 
+Example bool_bun : bequal (50 -' 25) (100 -' 75) ={ env0 }=> true.
+Proof.
+  eapply e_equal.
+  - eapply dif.
+    + apply const.
+    + apply const.
+    + simpl. auto.
+  - eapply dif.
+    + apply const.
+    + apply const.
+    + simpl. auto.
+  - simpl. reflexivity.
+Qed.
+
+Example bool_cast_nat : bool_to_nat true = 1.
+Proof.
+  simpl. trivial.
+Qed.
+
+Example bool_cast_nat2 : bool_to_nat false = 0.
+Proof.
+  simpl. trivial.
+Qed.
+
 Example decl_assign_nat : exists sigma1, (unsigned "a" ;; "a" :n= 10) -{ env0 }-> sigma1.
 Proof.
   eexists.
